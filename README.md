@@ -31,3 +31,12 @@ Bug reports and feedback are highly appreciated and can be made through our
 * [Running Experiments](docs/EXPERIMENTS.md)
 * [Mini-NDN Redmine](http://redmine.named-data.net/projects/mini-ndn)
 * [Contributor's Guide](https://github.com/named-data/NFD/blob/master/CONTRIBUTING.md)
+
+### New in this repo:
+This repo is customized for the overlay scenarios, where NFD is installed on part of nodes. 
+
+Two new configuration sections are added for the overlay topology, while the farmat of origin link configuration section is changed. 
+
+The default command is: `sudo minindn --experiment=deploy topologies/deploy.conf`
+
+
