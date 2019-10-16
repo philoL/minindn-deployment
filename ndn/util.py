@@ -80,3 +80,6 @@ class ProgramOptions:
         self.arguments = None
         self.csSize = 65536
         self.strategy = "best-route"
+        self.ol_nodes = None
+        self.ol_links = None #each item is a tupple of (src_node, dst_node)
+

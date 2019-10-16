@@ -70,7 +70,7 @@ from mininet.examples.clustercli import ClusterCLI
 from ndn import ExperimentManager
 from ndn.experiments.experiment import Experiment
 from ndn.ndn_host import NdnHost, CpuLimitedNdnHost, RemoteNdnHost
-from ndn.conf_parser import parse_hosts, parse_switches, parse_links
+from ndn.conf_parser import parse_hosts, parse_switches, parse_links, parse_overlay
 from ndn.remote_ndn_link import RemoteNdnLink, RemoteGRENdnLink
 from ndn.placer import GuidedPlacer, PopulatePlacement
 from ndn.nfd import Nfd
@@ -263,12 +263,15 @@ def parse_args():
     return options
 
 class NdnTopo(Topo):
-    def __init__(self, conf_arq, workDir, **opts):
+    def __init__(self, conf_arq, workDir, options, **opts):
         Topo.__init__(self, **opts)
 
         self.hosts_conf = parse_hosts(conf_arq)
         self.switches_conf = parse_switches(conf_arq)
         self.links_conf = parse_links(conf_arq)
+        options.ol_nodes, options.ol_links = parse_overlay(conf_arq)
+        info('Parse of overlay done.\n')
+
 
         self.isTCLink = False
         self.isLimited = False
@@ -288,6 +291,7 @@ class NdnTopo(Topo):
             else:
                 self.addLink(link.h1, link.h2, **link.linkDict)
                 self.isTCLink = True
+
 
         info('Parse of ' + conf_arq + ' done.\n')
 
@@ -326,7 +330,7 @@ def execute(options):
     if options.resultDir is not None:
         options.resultDir = createResultsDir(options.resultDir, options.nFaces, options.routingType)
 
-    topo = NdnTopo(options.templateFile, options.workDir)
+    topo = NdnTopo(options.templateFile, options.workDir, options)
 
     if topo.isTCLink == True and topo.isLimited == True:
         net = Mininet(topo,host=CpuLimitedNdnHost,link=TCLink)
@@ -460,3 +464,4 @@ if __name__ == '__main__':
         call(["nfd-stop"])
         call(["sudo", "mn", "--clean"])
         sys.exit(1)
+

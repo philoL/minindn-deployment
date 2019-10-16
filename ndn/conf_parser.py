@@ -58,6 +58,7 @@
 #   advertising or publicity pertaining to the Software or any derivatives
 #   without specific, written prior permission.
 
+import collections
 import ConfigParser, re
 import shlex
 import sys
@@ -92,9 +93,10 @@ class confNDNLink():
         return "h1: {} h2: {} params: {}".format(self.h1, self.h2, self.linkDict)
 
 def parse_hosts(conf_arq):
-    'Parse hosts section from the conf file.'
-    config = ConfigParser.RawConfigParser()
+    'parse hosts section from the conf file.'
+    config = ConfigParser.RawConfigParser(allow_no_value=True)
     config.read(conf_arq)
+
 
     hosts = []
 
@@ -108,7 +110,7 @@ def parse_hosts(conf_arq):
         # check for the duplicate coordinates
         if "radius" in item[1]:
             if item[1] in coordinates:
-                error("FATAL: Duplicate Coordinate, \"{}\" used by multiple nodes\n" \
+                error("fatal: duplicate coordinate, \"{}\" used by multiple nodes\n" \
                       .format(item[1]))
                 sys.exit(1)
             else:
@@ -153,7 +155,7 @@ def parse_hosts(conf_arq):
 
 def parse_switches(conf_arq):
     'Parse switches section from the conf file.'
-    config = ConfigParser.RawConfigParser()
+    config = ConfigParser.RawConfigParser(allow_no_value=True)
     config.read(conf_arq)
 
     switches = []
@@ -170,37 +172,56 @@ def parse_switches(conf_arq):
     return switches
 
 def parse_links(conf_arq):
-    'Parse links section from the conf file.'
-    arq = open(conf_arq, 'r')
+    print('Parse links section from the conf file.')
+    config = ConfigParser.RawConfigParser(allow_no_value=True)
+    config.read(conf_arq)
 
     links = []
-    linkSectionFlag = False
 
-    for line in arq:
-        if linkSectionFlag:
-            args = line.split()
+    try:
+        items = config.items('links')
+    except ConfigParser.NoSectionError:
+        return links
 
-            # checks for non-empty line
-            if len(args) == 0:
-                continue
+    for item in items:
+        h1,h2 = tuple(item[0].split('-'))
+        attributes = item[1].split()
+        link_dict = {}
+        for attr in attributes:
+            key,value = tuple(attr.split('='))
+            if key in ['bw','jitter','max_queue_size']:
+                value = int(value)
+            if key in ['loss']:
+                value = float(value)
+            link_dict[key] = value
 
-            h1, h2 = args.pop(0).split(':')
-
-            link_dict = {}
-
-            for arg in args:
-                arg_name, arg_value = arg.split('=')
-                key = arg_name
-                value = arg_value
-                if key in ['bw','jitter','max_queue_size']:
-                    value = int(value)
-                if key in ['loss']:
-                    value = float(value)
-                link_dict[key] = value
-
-            links.append(confNDNLink(h1,h2,link_dict))
-
-        elif line == "[links]\n":
-            linkSectionFlag = True
+        links.append(confNDNLink(h1,h2,link_dict))
 
     return links
+
+def parse_overlay(conf_arq):
+    print("Parse overlay section from the conf file")
+    config = ConfigParser.RawConfigParser(allow_no_value=True)
+    config.read(conf_arq)
+
+    ol_nodes = []
+    ol_links = collections.defaultdict(list)
+
+    try:
+        node_items = config.items('overlay_nodes')
+        link_items = config.items('overlay_links')
+    except ConfigParser.NoSectionError:
+        return ol_nodes,ol_links
+
+    for item in node_items:
+        ol_nodes.append(item[0])
+    for item in link_items:
+        h1 = item[0]
+        h2 = item[1]
+        ol_links[h1].append(h2)
+        ol_links[h2].append(h1)
+
+    print("overlay nodes: ", ol_nodes)
+    print("overlay links: ", ol_links)
+    return ol_nodes,ol_links
+
