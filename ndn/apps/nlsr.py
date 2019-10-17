@@ -203,7 +203,6 @@ class NlsrConfigGenerator:
             #print("neighbor: ", neighbor, " ip: ", ip)
             Nfdc.createFace(self.node, ip, self.faceType, isPermanent=True)
             self.neighborIPs.append(ip)
-
             self.node.cmd("{} -a neighbors.neighbor \
                           <<<\'name {}{}-site/%C1.Router/cs/{} face-uri {}://{}\n link-cost {}\'"
                           .format(self.infocmd, NETWORK, neighbor, neighbor, self.faceType, ip, linkCost))
