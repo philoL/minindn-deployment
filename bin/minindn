@@ -87,6 +87,7 @@ from subprocess import call
 import glob
 from functools import partial
 import re
+import collections
 
 try:
     import argcomplete
@@ -270,8 +271,8 @@ class NdnTopo(Topo):
         self.switches_conf = parse_switches(conf_arq)
         self.links_conf = parse_links(conf_arq)
         options.ol_nodes, options.ol_links = parse_overlay(conf_arq)
+        options.ol_nodes_ips = collections.defaultdict(list)
         info('Parse of overlay done.\n')
-
 
         self.isTCLink = False
         self.isLimited = False
@@ -291,7 +292,6 @@ class NdnTopo(Topo):
             else:
                 self.addLink(link.h1, link.h2, **link.linkDict)
                 self.isTCLink = True
-
 
         info('Parse of ' + conf_arq + ' done.\n')
 
@@ -364,15 +364,22 @@ def execute(options):
                 interfaces.append(link.intf1)
                 interfaces.append(link.intf2)
                 node1.setIP(ipStr(ipParse(ndnNetBase) + 1) + '/30', intf=link.intf1)
-                node2.setIP(ipStr(ipParse(ndnNetBase) + 2) + '/30', intf=link.intf2)
+                if node1.name in options.ol_nodes:
+                    options.ol_nodes_ips[node1.name].append(ipStr(ipParse(ndnNetBase) + 1))
+
+		node2.setIP(ipStr(ipParse(ndnNetBase) + 2) + '/30', intf=link.intf2)
+                if node2.name in options.ol_nodes:
+                    options.ol_nodes_ips[node2.name].append(ipStr(ipParse(ndnNetBase) + 2))
                 ndnNetBase = ipStr(ipParse(ndnNetBase) + 4)
 
     time.sleep(2)
 
     info('Starting NFD on nodes\n')
     for host in net.hosts:
-        host.nfd = Nfd(host, options.csSize)
-        host.nfd.start()
+        if host.name in options.ol_nodes:
+            info("node: " + host.name + "\n")
+            host.nfd = Nfd(host, options.csSize)
+            host.nfd.start()
 
     for host in net.hosts:
         if 'app' in host.params:
@@ -383,12 +390,13 @@ def execute(options):
 
     # Determine if each host is running NFD
     for host in net.hosts:
-        nfdStatus = host.cmd("ps -g -U root | grep 'nfd --config {}/[n]fd.conf'".format(host.homeFolder))
-        if not host.nfd.isRunning or not nfdStatus:
-            error("NFD on host {} is not running. Printing log file and exiting...".format(host.name))
-            info(host.cmd("tail {}/nfd.log".format(host.homeFolder)))
-            net.stop()
-            sys.exit(1)
+        if host.name in options.ol_nodes:
+            nfdStatus = host.cmd("ps -g -U root | grep 'nfd --config {}/[n]fd.conf'".format(host.homeFolder))
+            if not host.nfd.isRunning or not nfdStatus:
+                error("NFD on host {} is not running. Printing log file and exiting...".format(host.name))
+                info(host.cmd("tail {}/nfd.log".format(host.homeFolder)))
+                net.stop()
+                sys.exit(1)
 
     # Load experiment
     experimentName = options.experimentName

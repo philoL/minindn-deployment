@@ -38,6 +38,10 @@ class Experiment:
     def __init__(self, args):
         self.net = args["net"]
         self.options = args["options"]
+        self.ol_hosts = []
+        for host in self.net.hosts:
+            if host.name in self.options.ol_nodes:
+                self.ol_hosts.append(host)
 
         # Used to restart pings on the recovered node if any
         self.pingedDict = {}
@@ -53,7 +57,8 @@ class Experiment:
         self.run()
 
     def setup(self):
-        for host in self.net.hosts:
+        #for host in self.net.hosts:
+        for host in self.ol_hosts:
             # Set strategy
             Nfdc.setStrategy(host, "/ndn/", self.options.strategy)
 
@@ -70,11 +75,14 @@ class Experiment:
 
         # NLSR initialization
         info('Starting NLSR on nodes\n')
-        for host in self.net.hosts:
+        #for host in self.net.hosts:
+        for host in self.ol_hosts:
+            info("node: " + host.name + "\n")
             host.nlsr = Nlsr(host, self.options)
             host.nlsr.start()
 
-        for host in self.net.hosts:
+        #for host in self.net.hosts:
+        for host in self.ol_hosts:
             nlsrStatus = host.cmd("ps -g | grep 'nlsr -f {}/[n]lsr.conf'".format(host.homeFolder))
             if not host.nlsr.isRunning or not nlsrStatus:
                 print("NLSR on host {} is not running. Printing log file and exiting...".format(host.name))
@@ -98,11 +106,12 @@ class Experiment:
         didNlsrConverge = True
 
         # Checking for convergence
-        for host in self.net.hosts:
+        #for host in self.net.hosts:
+        for host in self.ol_hosts:
             statusRouter = host.cmd("nfdc fib list | grep site/%C1.Router/cs/")
             statusPrefix = host.cmd("nfdc fib list | grep ndn | grep site | grep -v Router")
             didNodeConverge = True
-            for node in self.net.hosts:
+            for node in self.ol_hosts:
                 # Node has its own router name in the fib list, but not name prefix
                 if ( ("/ndn/{}-site/%C1.Router/cs/{}".format(node.name, node.name)) not in statusRouter or
                       host.name != node.name and ("/ndn/{}-site/{}".format(node.name, node.name)) not in statusPrefix ):

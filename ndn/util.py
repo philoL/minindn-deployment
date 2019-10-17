@@ -80,6 +80,7 @@ class ProgramOptions:
         self.arguments = None
         self.csSize = 65536
         self.strategy = "best-route"
-        self.ol_nodes = None
-        self.ol_links = None #each item is a tupple of (src_node, dst_node)
+        self.ol_nodes = None # [node_name]
+        self.ol_links = None # collections.defaultdict([node_name])
+        self.ol_nodes_ips = None # collections.defaultdict([ip])
 

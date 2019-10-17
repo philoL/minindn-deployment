@@ -168,10 +168,11 @@ class NlsrConfigGenerator:
         possibleConfPaths = ["/usr/local/etc/ndn/nlsr.conf.sample", "/etc/ndn/nlsr.conf.sample"]
         copyExistentFile(node, possibleConfPaths, "{}/nlsr.conf".format(self.node.homeFolder))
 
-        self.createConfigFile()
+        self.createConfigFile(options)
 
-    def createConfigFile(self):
+    def createConfigFile(self, options):
 
+        self.options = options
         self.__editGeneralSection()
         self.__editNeighborsSection()
         self.__editHyperbolicSection()
@@ -187,7 +188,26 @@ class NlsrConfigGenerator:
         self.node.cmd("{} -s general.state-dir -v {}/log".format(self.infocmd, self.node.homeFolder))
 
     def __editNeighborsSection(self):
+        
+        self.node.cmd("{} -d neighbors.neighbor".format(self.infocmd))
+        ol_neighbors = self.options.ol_links[self.node.name]
+        ol_neighbors = list(set(ol_neighbors))
+        print(ol_neighbors)
+        for neighbor in ol_neighbors:
+            if neighbor == self.node.name:
+                continue
+            print("neighbor: ", neighbor, "ips ", self.options.ol_nodes_ips[neighbor])
+            ip = self.options.ol_nodes_ips[neighbor][0]
+            linkCost = '10' #TODO: fetch from config?
+            
+            #print("neighbor: ", neighbor, " ip: ", ip)
+            Nfdc.createFace(self.node, ip, self.faceType, isPermanent=True)
+            self.neighborIPs.append(ip)
 
+            self.node.cmd("{} -a neighbors.neighbor \
+                          <<<\'name {}{}-site/%C1.Router/cs/{} face-uri {}://{}\n link-cost {}\'"
+                          .format(self.infocmd, NETWORK, neighbor, neighbor, self.faceType, ip, linkCost))
+        """
         self.node.cmd("{} -d neighbors.neighbor".format(self.infocmd))
         for intf in self.node.intfList():
             link = intf.link
@@ -202,14 +222,16 @@ class NlsrConfigGenerator:
                     ip = other.IP(str(link.intf1))
 
                 linkCost = intf.params.get("delay", "10ms").replace("ms", "")
-
+                       
+                print("linkcost ",linkCost, " ",type(linkCost))
                 Nfdc.createFace(self.node, ip, self.faceType, isPermanent=True)
                 self.neighborIPs.append(ip)
 
                 self.node.cmd("{} -a neighbors.neighbor \
                               <<<\'name {}{}-site/%C1.Router/cs/{} face-uri {}://{}\n link-cost {}\'"
                               .format(self.infocmd, NETWORK, other.name, other.name, self.faceType, ip, linkCost))
-
+        """
+        
     def __editHyperbolicSection(self):
 
         self.node.cmd("{} -s hyperbolic.state -v {}".format(self.infocmd, self.hyperbolicState))

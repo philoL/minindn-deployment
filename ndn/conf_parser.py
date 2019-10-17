@@ -216,8 +216,7 @@ def parse_overlay(conf_arq):
     for item in node_items:
         ol_nodes.append(item[0])
     for item in link_items:
-        h1 = item[0]
-        h2 = item[1]
+        h1, h2 = tuple(item[0].split('-'))
         ol_links[h1].append(h2)
         ol_links[h2].append(h1)
 

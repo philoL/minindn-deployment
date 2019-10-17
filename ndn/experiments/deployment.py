@@ -32,16 +32,35 @@ class DeployExperiment(Experiment):
     def __init__(self, args):
         Experiment.__init__(self, args)
 
-    def setup(self):
-        pass
+    def start(self):
+        self.setup()
+        self.run()
 
-    def run(self):
+    def setup(self):
+        info("Experiment setup:")
+        
         # Calculate all routes for IP routing
         IPRoutingHelper.calcAllRoutes(self.net)
         info("IP routes configured, start ping\n")
-
         self.net.pingAll()
+        
+        if self.options.isNlsrEnabled is True:
+            self.startNlsr()
 
+        for host in self.ol_hosts:
+            info("node " + host.name + "\n")
+            # Set strategy
+            Nfdc.setStrategy(host, "/ndn/", self.options.strategy)
+
+            # Start ping server
+            info("Start ndnping servers")
+            host.cmd("ndnpingserver /ndn/{}-site/{} > ping-server &".format(host.name, host.name))
+
+            # Create folder to store ping data
+            host.cmd("mkdir ping-data")
+
+    def run(self):
+        pass
 
 Experiment.register("deploy", DeployExperiment)
 
