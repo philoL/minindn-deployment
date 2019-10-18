@@ -20,6 +20,8 @@
 # You should have received a copy of the GNU General Public License
 # along with Mini-NDN, e.g., in COPYING.md file.
 # If not, see <http://www.gnu.org/licenses/>.
+import time
+import sys
 
 from ndn.experiments.experiment import Experiment
 from ndn.apps.routing_helper import IPRoutingHelper
@@ -44,6 +46,12 @@ class DeployExperiment(Experiment):
         info("IP routes configured, start ping\n")
         self.net.pingAll()
         
+        for host in self.net.hosts:
+            if host.name in self.options.ol_nodes:
+                for intf in host.intfNames():
+                    ndnDumpOutputFile = "dump.%s" % intf
+                    host.cmd("sudo ndndump -f '.*sync.*|.*LSA.*' -i %s > %s &" % (intf, ndnDumpOutputFile))
+
         if self.options.isNlsrEnabled is True:
             self.startNlsr()
 
@@ -60,7 +68,11 @@ class DeployExperiment(Experiment):
             host.cmd("mkdir ping-data")
 
     def run(self):
-        pass
+       time.sleep(60)
+       print("run another 60s")
+       for host in self.ol_hosts:
+           host.nfd.stop()
+       sys.exit(0)
 
 Experiment.register("deploy", DeployExperiment)
 
